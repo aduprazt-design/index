@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Simulateur salaire — conversion durée de travail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #181818;
+    --bg3: #222222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --muted: #888;
+    --muted2: #555;
+    --accent: #c8ff57;
+    --accent-dim: rgba(200,255,87,0.12);
+    --success: #4ade80;
+    --danger: #f87171;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .page { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+  .header { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .header-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .badge { font-family: var(--font-mono); font-size: 11px; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,255,87,0.25); border-radius: 100px; padding: 2px 10px; letter-spacing: 0.04em; }
+  h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .subtitle { font-size: 13px; color: var(--muted); }
+
+  .section { margin-bottom: 1.25rem; }
+  .section-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--muted); }
+
+  .input-wrap { position: relative; }
+  .input-wrap input { padding-right: 32px; }
+  .input-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none; font-family: var(--font-mono); }
+
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus, select:focus { border-color: rgba(200,255,87,0.4); }
+  select { cursor: pointer; }
+  select option { background: #1a1a1a; }
+
+  .tranches-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .tranches-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .tranches-cols { display: grid; grid-template-columns: 56px 56px 72px 1fr 28px; gap: 6px; margin-bottom: 6px; }
+  .col-header { font-family: var(--font-mono); font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .tranche-row { display: grid; grid-template-columns: 56px 56px 72px 1fr 28px; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .tranche-row input, .tranche-row select { font-size: 13px; padding: 7px 8px; }
+  .tranche-row select { padding: 7px 6px; }
+
+  .btn-add {
+    font-family: var(--font-mono); font-size: 12px; padding: 5px 12px;
+    background: transparent; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-del {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--muted2);
+    cursor: pointer; font-size: 16px; line-height: 1;
+    width: 28px; height: 32px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-del:hover { border-color: var(--danger); color: var(--danger); }
+
+  .formula-box {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+    font-family: var(--font-mono); font-size: 12px; line-height: 2.2;
+    color: var(--muted);
+  }
+  .formula-box strong { color: var(--text); font-weight: 500; }
+  .formula-box .formula-accent { color: var(--accent); font-weight: 500; }
+
+  .metric-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-bottom: 6px; }
+  .metric-value { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; font-family: var(--font-mono); }
+
+  .result-card {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); opacity: 0.6;
+  }
+  .result-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+  .result-label-txt { font-size: 13px; color: var(--muted); }
+  .result-big { font-size: 40px; font-weight: 600; letter-spacing: -0.04em; font-family: var(--font-mono); color: var(--accent); }
+
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; opacity: 0.7; }
+
+  .result-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .rb-item .rb-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-bottom: 3px; }
+  .rb-item .rb-val { font-size: 14px; font-weight: 500; font-family: var(--font-mono); }
+
+  .warn-msg { font-family: var(--font-mono); font-size: 11px; color: var(--danger); margin-top: 6px; }
+
+  .legal-note {
+    margin-top: 1.5rem; padding: 0.75rem 1rem;
+    border-left: 2px solid var(--border2); border-radius: 0;
+    font-size: 12px; color: var(--muted); line-height: 1.7;
+  }
+  .legal-note strong { color: var(--text); font-weight: 500; }
+
+  .pos { color: var(--success); }
+  .neg { color: var(--danger); }
+
+  @media (max-width: 480px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .tranches-cols, .tranche-row { grid-template-columns: 50px 50px 64px 1fr 28px; }
+    .result-bottom { grid-template-columns: 1fr 1fr; }
+    .result-big { font-size: 30px; }
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .section { animation: fadeIn 0.3s ease both; }
+  .section:nth-child(2) { animation-delay: 0.05s; }
+  .section:nth-child(3) { animation-delay: 0.1s; }
+  .section:nth-child(4) { animation-delay: 0.15s; }
+  .section:nth-child(5) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-top">
+      <h1>Simulateur salaire</h1>
+      <span class="badge">France · Syntec</span>
+    </div>
+    <p class="subtitle">Conversion brut mensuel entre durées de travail — majorations paramétrables</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Paramètres principaux</div>
+    <div class="grid-2" style="margin-bottom:10px;">
+      <div class="field">
+        <label>Salaire brut mensuel source</label>
+        <div class="input-wrap">
+          <input type="number" id="salaire" value="3000" min="0" step="10" oninput="calculate()" />
+          <span class="input-suffix">€</span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Heures source</label>
+          <div class="input-wrap">
+            <input type="number" id="h-source" value="35" min="1" max="60" step="0.5" oninput="calculate()" />
+            <span class="input-suffix">h</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Heures cible</label>
+          <div class="input-wrap">
+            <input type="number" id="h-cible" value="37" min="1" max="60" step="0.5" oninput="calculate()" />
+            <span class="input-suffix">h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="tranches-box">
+      <div class="tranches-header">
+        <div class="section-label" style="margin:0;">Tranches de majoration</div>
+        <button class="btn-add" onclick="addTranche()">+ ajouter</button>
+      </div>
+      <div class="tranches-cols">
+        <span class="col-header">De (h)</span>
+        <span class="col-header">À (h)</span>
+        <span class="col-header">Taux</span>
+        <span class="col-header">Type</span>
+        <span></span>
+      </div>
+      <div id="tranches-container"></div>
+      <p id="warn" class="warn-msg" style="display:none;">⚠ Heures hors tranche → calculées sans majoration</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Détail du calcul</div>
+    <div class="formula-box" id="formula"></div>
+  </div>
+
+  <div class="section">
+    <div class="grid-3" style="margin-bottom:10px;">
+      <div class="metric-card">
+        <div class="metric-label">Taux / h source</div>
+        <div class="metric-value" id="taux-src">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Taux / h effectif cible</div>
+        <div class="metric-value" id="taux-tgt">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Différence mensuelle</div>
+        <div class="metric-value" id="diff-m">—</div>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-top">
+        <span class="result-label-txt" id="result-label">Salaire converti</span>
+        <span class="result-big" id="result-val">—</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress" style="width:50%"></div></div>
+      <div class="result-bottom">
+        <div class="rb-item">
+          <div class="rb-label">Annuel source</div>
+          <div class="rb-val" id="ann-src">—</div>
+        </div>
+        <div class="rb-item">
+          <div class="rb-label">Annuel cible</div>
+          <div class="rb-val" id="ann-tgt">—</div>
+        </div>
+        <div class="rb-item">
+          <div class="rb-label">Différence annuelle</div>
+          <div class="rb-val" id="diff-a">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legal-note">
+    <strong>Code du travail (France) :</strong> heures 36–39 majorées à +25%, heures 40 et + à +50%.<br>
+    Calcul basé sur <strong>h × 52 / 12</strong> pour le nombre d'heures mensuelles moyennes.<br>
+    Fonctionne dans les deux sens (hausse ou baisse de durée).
+  </div>
+
+</div>
+
+<script>
+let tranches = [
+  { de: 35, a: 39, taux: 25, type: 'pct' },
+  { de: 39, a: 999, taux: 50, type: 'pct' }
+];
+
+const fmt = n => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n);
+const fmtH = n => n.toFixed(2) + 'h';
+const mensuel = h => h * 52 / 12;
+
+function renderTranches() {
+  const c = document.getElementById('tranches-container');
+  c.innerHTML = '';
+  tranches.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'tranche-row';
+    row.innerHTML =
+      `<input type="number" value="${t.de}" min="0" max="80" step="0.5" oninput="upd(${i},'de',this.value)" />` +
+      `<input type="number" value="${t.a === 999 ? '' : t.a}" placeholder="∞" min="0" step="0.5" oninput="upd(${i},'a',this.value)" />` +
+      `<input type="number" value="${t.taux}" min="0" max="500" step="5" oninput="upd(${i},'taux',this.value)" />` +
+      `<select onchange="upd(${i},'type',this.value)">
+        <option value="pct" ${t.type==='pct'?'selected':''}>% du taux horaire</option>
+        <option value="flat" ${t.type==='flat'?'selected':''}>€ / h fixe</option>
+      </select>` +
+      `<button class="btn-del" onclick="delTranche(${i})" title="Supprimer">×</button>`;
+    c.appendChild(row);
+  });
+}
+
+function upd(i, key, val) {
+  if (key === 'type') tranches[i][key] = val;
+  else if (key === 'a') tranches[i][key] = val === '' ? 999 : (parseFloat(val) || 999);
+  else tranches[i][key] = parseFloat(val) || 0;
+  calculate();
+}
+
+function addTranche() {
+  tranches.push({ de: 39, a: 999, taux: 50, type: 'pct' });
+  renderTranches(); calculate();
+}
+
+function delTranche(i) {
+  tranches.splice(i, 1);
+  renderTranches(); calculate();
+}
+
+function getTranche(h) {
+  return tranches.find(t => h > t.de && h <= t.a) || null;
+}
+
+function calculate() {
+  renderTranches();
+  const salaire = parseFloat(document.getElementById('salaire').value) || 0;
+  const hSrc = parseFloat(document.getElementById('h-source').value) || 35;
+  const hTgt = parseFloat(document.getElementById('h-cible').value) || 37;
+
+  const mSrc = mensuel(hSrc);
+  const mTgt = mensuel(hTgt);
+  const tauxBase = salaire / mSrc;
+
+  document.getElementById('result-label').textContent = `${hSrc}h → ${hTgt}h`;
+
+  let html = `<span>Taux horaire base (${hSrc}h) = </span>${fmt(salaire)} ÷ ${fmtH(mSrc)} = <strong class="formula-accent">${fmt(tauxBase)}/h</strong><br>`;
+
+  const hMin = Math.min(hSrc, hTgt);
+  const hMax = Math.max(hSrc, hTgt);
+  const isHausse = hTgt > hSrc;
+  let coutTotal = 0;
+  let warned = false;
+
+  if (hMin !== hMax) {
+    let cursor = hMin;
+    while (cursor < hMax) {
+      const t = getTranche(cursor + 0.0001);
+      const end = t ? Math.min(hMax, t.a) : hMax;
+      if (!t) warned = true;
+      const nbH = end - cursor;
+      const mH = mensuel(nbH);
+      let cout = 0, detail = '';
+      if (t) {
+        if (t.type === 'pct') {
+          cout = tauxBase * (t.taux / 100) * mH;
+          detail = `Heures ${cursor}h–${end}h (+${t.taux}%) = ${fmt(tauxBase)} × ${(t.taux/100).toFixed(2)} × ${fmtH(mH)} = <strong>${fmt(cout)}</strong>`;
+        } else {
+          cout = t.taux * mH;
+          detail = `Heures ${cursor}h–${end}h (${t.taux}€/h fixe) = ${t.taux}€ × ${fmtH(mH)} = <strong>${fmt(cout)}</strong>`;
+        }
+      } else {
+        cout = tauxBase * mH;
+        detail = `Heures ${cursor}h–${end}h (sans majoration) = ${fmt(tauxBase)} × ${fmtH(mH)} = <strong>${fmt(cout)}</strong>`;
+      }
+      coutTotal += cout;
+      const partBase = tauxBase * mH;
+      const majSeule = isHausse ? cout : cout;
+      html += `<span>${isHausse ? '+ ' : '− '}</span>${detail}<br>`;
+      cursor = end;
+    }
+  }
+
+  document.getElementById('warn').style.display = warned ? 'block' : 'none';
+
+  let salaireConverti;
+  if (hSrc === hTgt) {
+    salaireConverti = salaire;
+    html = `<span>Heures source = heures cible → aucune conversion.</span>`;
+  } else if (isHausse) {
+    const partBaseSupp = tauxBase * mensuel(hTgt - hSrc);
+    salaireConverti = salaire + partBaseSupp + coutTotal;
+    html += `<span>Total = </span>${fmt(salaire)} + ${fmt(partBaseSupp)} (base) + ${fmt(coutTotal)} (majorations) = <strong class="formula-accent">${fmt(salaireConverti)}</strong>`;
+  } else {
+    const partBaseRetrait = tauxBase * mensuel(hSrc - hTgt);
+    salaireConverti = salaire - partBaseRetrait - coutTotal;
+    html += `<span>Total = </span>${fmt(salaire)} − ${fmt(partBaseRetrait)} (base) − ${fmt(coutTotal)} (majorations) = <strong class="formula-accent">${fmt(salaireConverti)}</strong>`;
+  }
+
+  document.getElementById('formula').innerHTML = html;
+
+  const tauxTgt = salaireConverti / mTgt;
+  const diff = salaireConverti - salaire;
+  const annDiff = diff * 12;
+
+  document.getElementById('taux-src').textContent = fmt(tauxBase) + '/h';
+  document.getElementById('taux-tgt').textContent = fmt(tauxTgt) + '/h';
+
+  const diffEl = document.getElementById('diff-m');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + fmt(diff);
+  diffEl.className = 'metric-value ' + (diff >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('result-val').textContent = fmt(salaireConverti);
+  document.getElementById('ann-src').textContent = fmt(salaire * 12);
+  document.getElementById('ann-tgt').textContent = fmt(salaireConverti * 12);
+
+  const annEl = document.getElementById('diff-a');
+  annEl.textContent = (annDiff >= 0 ? '+' : '') + fmt(annDiff);
+  annEl.className = 'rb-val ' + (annDiff >= 0 ? 'pos' : 'neg');
+
+  const pct = Math.min(98, Math.max(5, (salaireConverti / (salaire * 1.6)) * 100));
+  document.getElementById('progress').style.width = pct.toFixed(1) + '%';
+}
+
+renderTranches();
+calculate();
+</script>
+</body>
+</html>
